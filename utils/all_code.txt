@@ -1,0 +1,594 @@
+# config/Database.php
+<?php
+class Database
+{
+    public $host = "localhost";
+    public $username = "root";
+    public $password = "";
+    public $databaseName = "eithercookid_db";
+
+    public function connect(): ?PDO
+    {
+        $dsn = "mysql:host={$this->host};dbname={$this->databaseName};charset=utf8mb4";
+
+        $connection = new PDO($dsn, $this->username, $this->password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+
+        return $connection ?: null;
+    }
+}
+
+# entity/Category.php
+<?php
+
+class Category
+{
+    public function __construct(
+        public ?int $id = null,
+        public string $name = '',
+        public string $urlImage = '',
+        public string $description = '',
+    ) {}
+}
+
+
+# entity/Product.php
+<?php
+
+class Product
+{
+    public function __construct(
+        public ?int $id = null,
+        public ?int $categoryId = null,
+        public string $name = '',
+        public string $urlImage = '',
+        public string $description = '',
+        public bool $recommendation = false,
+        public float $price = 0.0,
+        public bool $available = true,
+    ) {}
+}
+
+# entity/Variant.php
+<?php
+class Variant
+{
+    public function __construct(
+        public ?int $id = null,
+        public ?int $productId = null,
+        public string $name = '',
+        public ?int $max = null,
+        public ?int $min = null,
+    ) {}
+}
+
+# entity/VariantItem.php
+<?php
+
+class VariantItem
+{
+    public function __construct(
+        public ?int $id = null,
+        public ?int $variantId = null,
+        public string $name = '',
+    ) {}
+}
+
+# index.php
+
+
+# repository/CategoryRepository.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../entity/Category.php';
+
+class CategoryRepository
+{
+    private PDO $conn;
+    public function __construct()
+    {
+        $db = new Database();
+        $this->conn = $db->connect();
+    }
+
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM categories";
+        $stmt = $this->conn->query($sql);
+
+        $categories = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = new Category(
+                id: (int)$row['id'],
+                name: $row['name'],
+                urlImage: $row['url_image'],
+                description: $row['description']
+            );
+            $categories[]=$category;
+        }
+        return $categories;
+    }
+
+    public function findById(int $id): ?Category
+    {
+        $sql = "SELECT * FROM categories WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return null;
+
+        $category = new Category (
+            id: (int)$row['id'],
+            name: $row['name'],
+            urlImage: $row['url_image'],
+            description: $row['description']
+        );
+        return $category;
+    }
+
+    public function create(Category $category): bool
+    {
+        $sql = "INSERT INTO categories (name, url_image, description) VALUES (:name, :urlImage, :description)";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'name' => $category->name,
+            'urlImage' => $category->urlImage,
+            'description' => $category->description,
+        ]);
+    }
+
+    public function update(Category $category): bool
+    {
+        if ($category->id === null) return false;
+
+        $sql = "UPDATE categories SET name = :name, url_image = :urlImage, description = :description WHERE id = :id";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $category->id,
+            'name' => $category->name,
+            'urlImage' => $category->urlImage,
+            'description' => $category->description,
+        ]);
+    }
+
+    public function delete(Category $category): bool
+    {
+        if ($category->id === null) return false;
+
+        $sql = "DELETE FROM categories WHERE id = :id";
+        $stmt = $this->conn->prepare ($sql);
+
+        return $stmt->execute(['id' => $category->id]);
+    }
+}
+
+# repository/ProductRepository.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../entity/Product.php';
+
+class ProductRepository
+{
+    private PDO $conn;
+    public function __construct()
+    {
+        $db = new Database();
+        $this->conn = $db->connect();
+    }
+
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM products";
+        $stmt = $this->conn->query($sql);
+
+        $products = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $product = new Product(
+                (int)$row['id'],
+                $row['category_id'],
+                $row['name'],
+                $row['url_image'],
+                $row['description'],
+                (bool)$row['recommendation'],
+                (float)$row['price'],
+                (bool)$row['available']
+            );
+            $products[]=$product;
+        }
+        return $products;
+    }
+
+    public function findById(int $id): ?Product
+    {
+        $sql = "SELECT * FROM products WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return null;
+
+        $product = new Product (
+            (int)$row['id'],
+            $row['category_id'], 
+            $row['name'],
+            $row['url_image'],
+            $row['description'],
+            (bool)$row['recommendation'],
+            (float)$row['price'],
+            (bool)$row['available']
+        );
+        return $product;
+    }
+
+    public function findByCategory(int $categoryId): array
+    {
+        $sql = "SELECT * FROM products WHERE category_id = :categoryId";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['categoryId' => $categoryId]);
+        $products = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $product = new Product (
+                (int)$row['id'],
+                $row['category_id'], 
+                $row['name'],
+                $row['url_image'],
+                $row['description'],
+                (bool)$row['recommendation'],
+                (float)$row['price'],
+                (bool)$row['available']
+            );
+            $products[]=$product;
+        }
+        return $products;
+    }
+
+    public function create(Product $product): bool
+    {
+        $sql = "INSERT INTO products (category_id, name, url_image, description, recommendation, price, available) VALUES (:categoryId, :name, :urlImage, :description, :recommendation, :price, :available)";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'categoryId' => $product->categoryId,
+            'name' => $product->name,
+            'urlImage' => $product->urlImage,
+            'description' => $product->description,
+            'recommendation' => $product->recommendation,
+            'price' => $product->price,
+            'available' => $product->available,
+        ]);
+    }
+
+    public function update(Product $product): bool
+    {
+        if ($product->id === null) return false;
+
+        $sql = "UPDATE products SET category_id = :categoryId, name = :name, url_image = :urlImage, description = :description, recommendation = :recommendation, price = :price, available = :available WHERE id = :Id";
+        
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $product->id,
+            'categoryId' => $product->categoryId,
+            'name' => $product->name,
+            'urlImage' => $product->urlImage,
+            'description' => $product->description,
+            'recommendation' => $product->recommendation,
+            'price' => $product->price,
+            'available' => $product->available,
+        ]);
+    }
+
+    public function delete(Product $product): bool
+    {
+        if ($product->id === null) return false;
+
+        $sql = "DELETE FROM products WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        
+        return $stmt->execute(['id' => $product->id]);
+    }
+}
+
+# repository/VariantItemRepository.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../entity/VariantItem.php';
+
+class VariantItemRepository
+{
+    private PDO $conn;
+    public function __construct()
+    {
+        $db = new Database();
+        $this->conn = $db->connect();
+    }
+
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM varian_items";
+        $stmt = $this->conn->query($sql);
+
+        $varianItems = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $varianItem = new VariantItem(
+                id: (int)$row['id'],
+                variantId: $row['variant_id'],
+                name: $row['name']
+            );
+            $varianItems[]=$varianItem;
+        }
+        return $varianItems;
+    }
+
+    public function findById(int $id): ?VariantItem
+    {
+        $sql = "SELECT * FROM varian_items WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return null;
+
+        $varianItem = new VariantItem (
+            id: (int)$row['id'],
+            variantId: $row['variant_id'],
+            name: $row['name']
+        );
+        return $varianItem;
+    }
+
+   public function findByVariant(int $variantId): array
+    {
+        $sql = "SELECT * FROM variant_items WHERE variant_id = :variantId";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['variantId' => $variantId]);
+        $variantItems = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $variantItem = new VariantItem (
+                id: (int)$row['id'],
+                variantId: $row['variant_id'], 
+                name: $row['name'],
+            );
+            $variantItems[]=$variantItem;
+        }
+        return $variantItems;
+    }
+    public function create(VariantItem $variantItem): bool
+    {
+        $sql = "INSERT INTO varian_items (name) VALUES (:name)";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'name' => $variantItem->name,
+        ]);
+    }
+
+    public function update(VariantItem $variantItem): bool
+    {
+        if ($variantItem->id === null) return false;
+
+        $sql = "UPDATE varian_items SET name = :name WHERE id = :id";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $variantItem->id,
+            'name' => $variantItem->name,
+        ]);
+    }
+
+    public function delete(VariantItem $variantItem): bool 
+    {
+        if ($variantItem->id === null) return false;
+
+        $sql = "DELETE FROM varian_items WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        
+        return $stmt->execute(['id' => $variantItem->id]);
+    }
+}
+
+# repository/VariantRepository.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../entity/Variant.php';
+
+class VariantRepository
+{
+    private PDO $conn;
+    public function __construct() 
+    {
+        $db = new Database();
+        $this->conn = $db->connect();
+    }
+
+    public function findAll(): array
+    {
+        $sql = "SELECT * FROM variants";
+        $stmt = $this->conn->query($sql);
+
+        $variants = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $variant = new Variant(
+                id: (int)$row['id'],
+                productId: $row['product_id'],
+                name: $row['name'],
+                max: $row['max'],
+                min: $row['min']
+            );
+            $variants[]=$variant;
+        }
+        return $variants;
+    }
+
+    public function findById(int $id): ?Variant 
+    {
+        $sql = "SELECT * FROM variants WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return null;
+
+        $variant = new Variant (
+            id: (int)$row['id'],
+            productId: $row['product_id'],
+            name: $row['name'],
+            max: $row['max'],
+            min: $row['min']
+        );
+        return $variant;
+    }
+
+   public function findByProduct(int $productId): array
+    {
+        $sql = "SELECT * FROM variants WHERE product_id = :productId";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['productId' => $productId]);
+        $variants = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $variant = new Variant (
+                id: (int)$row['id'],
+                productId: $row['product_id'], 
+                name: $row['name'],
+                max: $row['max'],
+                min: $row['min']
+            );
+            $variants[]=$variant;
+        }
+        return $variants;
+    }
+
+    public function create(Variant $variant): bool 
+    {
+        $sql = "
+        INSERT INTO variants 
+        (product_id, name, max, min) 
+        VALUES 
+        (:productId, :name, :max, :min)";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'productId' =>$variant->productId,
+            'name' => $variant->name,
+            'max' => $variant->max,
+            'min' => $variant->min,
+        ]);
+    }
+
+    public function update(Variant $variant): bool 
+    {
+        if ($variant->id === null) return false;
+
+        $sql = "UPDATE variants SET product_id = :productId, name = :name, max = :max, min = :min WHERE id = :id";
+
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute([
+            'productId' =>$variant->productId,
+            'name' => $variant->name,
+            'max' => $variant->max,
+            'min' => $variant->min,
+        ]);
+    }
+
+    public function delete(Variant $variant): bool 
+    {
+        if ($variant->id === null) return false;
+
+        $sql = "DELETE FROM variants WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+
+        return $stmt->execute(['id' => $variant->id]);
+    }
+}
+
+# route.php
+
+
+# setup/create_db.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+
+$db = new Database();
+
+$dsn = "mysql:host={$db->host};charset=utf8mb4";
+$pdo = new PDO($dsn, $db->username, $db->password, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+]);
+
+$pdo->exec("CREATE DATABASE IF NOT EXISTS {$db->databaseName}");
+    
+$pdo->exec("USE {$db->databaseName}");
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS categories (
+        id INT AUTO_INCREMENT PRIMARY KEY, 
+        name VARCHAR(255) NOT NULL,
+        url_image TEXT NOT NULL,
+        description TEXT NOT NULL
+    );
+");
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        url_image TEXT NOT NULL,
+        description TEXT NOT NULL,
+        recommendation TINYINT(1) DEFAULT 0,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.0,
+        available TINYINT(1) DEFAULT 1     
+    );
+");
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS variants (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        max INT NULL,
+        min INT NULL
+    );
+");
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS varian_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL
+    )
+");
+
+echo "database created";
+
+
+# setup/drop_db.php
+<?php
+require_once __DIR__ . '/../config/Database.php';
+
+$db = new Database();
+
+$dsn = "mysql:host={$db->host};charset=utf8mb4";
+
+try {
+    $pdo = new PDO($dsn, $db->username, $db->password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+
+    $dbName = $db->databaseName;
+
+    $pdo->exec("DROP DATABASE IF EXISTS $dbName;");
+
+    echo "Database '$dbName' berhasil dihapus.";
+} catch (PDOException $e) {
+    echo "Gagal menghapus database: " . $e->getMessage();
+}
+
