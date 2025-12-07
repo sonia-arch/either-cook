@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Product.php';
 
@@ -28,7 +29,7 @@ class ProductRepository
                 (float)$row['price'],
                 (bool)$row['available']
             );
-            $products[]=$product;
+            $products[] = $product;
         }
         return $products;
     }
@@ -42,9 +43,9 @@ class ProductRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $product = new Product (
+        $product = new Product(
             (int)$row['id'],
-            $row['category_id'], 
+            $row['category_id'],
             $row['name'],
             $row['url_image'],
             $row['description'],
@@ -62,9 +63,9 @@ class ProductRepository
         $stmt->execute(['categoryId' => $categoryId]);
         $products = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $product = new Product (
+            $product = new Product(
                 (int)$row['id'],
-                $row['category_id'], 
+                $row['category_id'],
                 $row['name'],
                 $row['url_image'],
                 $row['description'],
@@ -72,7 +73,7 @@ class ProductRepository
                 (float)$row['price'],
                 (bool)$row['available']
             );
-            $products[]=$product;
+            $products[] = $product;
         }
         return $products;
     }
@@ -100,11 +101,11 @@ class ProductRepository
     {
         if ($product->id === null) return false;
 
-        $sql = "UPDATE products SET category_id = :categoryId, name = :name, url_image = :urlImage, description = :description, recommendation = :recommendation, price = :price, available = :available WHERE id = :Id";
-        
+        $sql = "UPDATE products SET category_id = :categoryId, name = :name, url_image = :urlImage, description = :description, recommendation = :recommendation, price = :price, available = :available WHERE id = :id";
+
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute([
+        $stmt->execute([
             'id' => $product->id,
             'categoryId' => $product->categoryId,
             'name' => $product->name,
@@ -114,15 +115,16 @@ class ProductRepository
             'price' => $product->price,
             'available' => $product->available,
         ]);
+
+        return $stmt->rowCount() > 0;
     }
+
 
     public function delete(int $productId): bool
     {
-        if ($productId === null) return false;
-
         $sql = "DELETE FROM products WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
-        
+
         return $stmt->execute(['id' => $productId]);
     }
 }

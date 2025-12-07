@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Product Detail</h1>
-    <a href="/product/list">Back to Product List</a>
+    <a href="<?= BASE_PATH ?>/product/list">Back to Product List</a>
 
 ```
 <h2><?= htmlspecialchars($product->name) ?></h2>

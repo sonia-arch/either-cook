@@ -1,11 +1,12 @@
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Variant.php';
 
 class VariantRepository
 {
     private PDO $conn;
-    public function __construct() 
+    public function __construct()
     {
         $db = new Database();
         $this->conn = $db->connect();
@@ -25,12 +26,12 @@ class VariantRepository
                 max: $row['max'],
                 min: $row['min']
             );
-            $variants[]=$variant;
+            $variants[] = $variant;
         }
         return $variants;
     }
 
-    public function findById(int $id): ?Variant 
+    public function findById(int $id): ?Variant
     {
         $sql = "SELECT * FROM variants WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
@@ -39,7 +40,7 @@ class VariantRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $variant = new Variant (
+        $variant = new Variant(
             id: (int)$row['id'],
             productId: $row['product_id'],
             name: $row['name'],
@@ -49,26 +50,26 @@ class VariantRepository
         return $variant;
     }
 
-   public function findByProduct(int $productId): array
+    public function findByProduct(int $productId): array
     {
         $sql = "SELECT * FROM variants WHERE product_id = :productId";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['productId' => $productId]);
         $variants = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $variant = new Variant (
+            $variant = new Variant(
                 id: (int)$row['id'],
-                productId: $row['product_id'], 
+                productId: $row['product_id'],
                 name: $row['name'],
                 max: $row['max'],
                 min: $row['min']
             );
-            $variants[]=$variant;
+            $variants[] = $variant;
         }
         return $variants;
     }
 
-    public function create(Variant $variant): Variant 
+    public function create(Variant $variant): Variant
     {
         $sql = "
         INSERT INTO variants 
@@ -79,7 +80,7 @@ class VariantRepository
         $stmt = $this->conn->prepare($sql);
 
         $stmt->execute([
-            'productId' =>$variant->productId,
+            'productId' => $variant->productId,
             'name' => $variant->name,
             'max' => $variant->max,
             'min' => $variant->min,
@@ -88,7 +89,7 @@ class VariantRepository
         return $variant;
     }
 
-    public function update(Variant $variant): bool 
+    public function update(Variant $variant): bool
     {
         if ($variant->id === null) return false;
 
@@ -97,17 +98,16 @@ class VariantRepository
         $stmt = $this->conn->prepare($sql);
 
         return $stmt->execute([
-            'productId' =>$variant->productId,
+            'id' => $variant->id,
+            'productId' => $variant->productId,
             'name' => $variant->name,
             'max' => $variant->max,
             'min' => $variant->min,
         ]);
     }
 
-    public function delete(int $variantId): bool 
+    public function delete(int $variantId): bool
     {
-        if ($variantId === null) return false;
-
         $sql = "DELETE FROM variants WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
 

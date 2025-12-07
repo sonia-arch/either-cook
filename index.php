@@ -1,7 +1,8 @@
 <?php
 
-use ProductController;
-use CategoryController;
+require_once __DIR__ . '/controller/ProductController.php';
+require_once __DIR__ . '/controller/CategoryController.php';
+require_once __DIR__ . '/config/base_path.php';
 
 $uri = strtolower(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 $uri = preg_replace('#^/either-cook#', '', $uri);
@@ -72,25 +73,25 @@ if ($s0 === 'category' && $s1 === 'edit' && is_numeric($s2)) {
     exit;
 }
 
-if ($s0 === 'product' && $s1 === 'list') {
+if ($s0 === 'category' && $s1 === 'list') {
     $controller = new CategoryController();
     $controller->list();
     exit;
 }
 
-if ($s0 === 'product' && $s1 === 'create') {
+if ($s0 === 'category' && $s1 === 'create') {
     $controller = new CategoryController();
     $controller->create();
     exit;
 }
 
-if ($s0 === 'product' && $s1 === 'store') {
+if ($s0 === 'category' && $s1 === 'store') {
     $controller = new CategoryController();
     $controller->store();
     exit;
 }
 
-if ($s0 === 'product' && $s1 === 'update') {
+if ($s0 === 'category' && $s1 === 'update') {
     $controller = new CategoryController();
     $controller->update();
     exit;

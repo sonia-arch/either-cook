@@ -8,9 +8,9 @@
 <body>
 
 <h1>Edit Product</h1>
-<a href="/product/list">Back to Product List</a>
+<a href="<?= BASE_PATH ?>/product/list">Back to Product List</a>
 
-<form action="/product/update" method="post">
+<form action="<?= BASE_PATH ?>/product/update" method="post">
 
 <input type="hidden" name="id" value="<?= htmlspecialchars($product->id) ?>">
 
@@ -126,7 +126,7 @@ function addVariant() {
         <div class="variant-block" data-variant-index="${variantIndex}">
             <h4>Variant</h4>
 
-            <input type="hidden" name="variants[${variantIndex}][id]" value="">
+            <input type="hidden" name="variants[${variantIndex}][id]" value="0">
             <input type="hidden" name="variants[${variantIndex}][productId]" value="<?= $product->id ?>">
 
             <label>Name</label><br>
@@ -142,14 +142,14 @@ function addVariant() {
 
             <div id="variant-items-${variantIndex}">
                 <div data-item-index="0">
-                    <input type="hidden" name="variants[${variantIndex}][variantItems][0][id]" value="">
-                    <input type="hidden" name="variants[${variantIndex}][variantItems][0][variantId]" value="">
+                    <input type="hidden" name="variants[${variantIndex}][variantItems][0][id]" value="0">
+                    <input type="hidden" name="variants[${variantIndex}][variantItems][0][variantId]" value="0">
                     <input type="text" name="variants[${variantIndex}][variantItems][0][name]" placeholder="Item 1" required><br><br>
                 </div>
 
                 <div data-item-index="1">
-                    <input type="hidden" name="variants[${variantIndex}][variantItems][1][id]" value="">
-                    <input type="hidden" name="variants[${variantIndex}][variantItems][1][variantId]" value="">
+                    <input type="hidden" name="variants[${variantIndex}][variantItems][1][id]" value="0">
+                    <input type="hidden" name="variants[${variantIndex}][variantItems][1][variantId]" value="0">
                     <input type="text" name="variants[${variantIndex}][variantItems][1][name]" placeholder="Item 2" required><br><br>
                 </div>
             </div>
@@ -182,8 +182,8 @@ function addItem(variantId) {
 
     let html = `
         <div data-item-index="${index}">
-            <input type="hidden" name="variants[${variantId}][variantItems][${index}][id]" value="">
-            <input type="hidden" name="variants[${variantId}][variantItems][${index}][variantId]" value="">
+            <input type="hidden" name="variants[${variantId}][variantItems][${index}][id]" value="0">
+            <input type="hidden" name="variants[${variantId}][variantItems][${index}][variantId]" value="0">
             <input type="text" name="variants[${variantId}][variantItems][${index}][name]" 
                    placeholder="Item ${index + 1}" required>
 

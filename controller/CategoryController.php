@@ -1,5 +1,8 @@
 <?php
+
 require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../entity/Category.php';
+require_once __DIR__ . '/../config/base_path.php';
 
 class CategoryController
 {
@@ -15,12 +18,6 @@ class CategoryController
         $categories = $this->repo->findAll();
         include __DIR__ . '/../view/category_list.php';
     }
-
-    // public function detail(int $id)
-    // {
-    //     $category = $this->repo->findById($id);
-    //     include __DIR__ . '/../view/category_detail.php';
-    // }
 
     public function create()
     {
@@ -39,13 +36,12 @@ class CategoryController
             description: $description
         );
         $this->repo->create($category);
-        header("Location: /category/list");
+        header("Location: " . BASE_PATH . "/category/list");
         exit;
     }
 
     public function edit(int $id)
     {
-
         $category = $this->repo->findById($id);
         include __DIR__ . '/../view/category_edit.php';
     }
@@ -64,7 +60,7 @@ class CategoryController
             description: $description
         );
         $this->repo->update($category);
-        header("Location: /category/list");
+        header("Location: " . BASE_PATH . "/category/list");
         exit;
     }
 
@@ -73,7 +69,7 @@ class CategoryController
         $id = $_POST['id'];
 
         $this->repo->delete($id);
-        header("Location: /category/list");
+        header("Location: " . BASE_PATH . "/category/list");
         exit;
     }
 }

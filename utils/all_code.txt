@@ -13,17 +13,290 @@ class Database
 
         $connection = new PDO($dsn, $this->username, $this->password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_STRINGIFY_FETCHES  => false,
         ]);
 
         return $connection ?: null;
     }
 }
 
+# config/base_path.php
+<?php
+define('BASE_PATH', '/either-cook');
+
+
+# controller/CategoryController.php
+<?php
+
+require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../entity/Category.php';
+require_once __DIR__ . '/../config/base_path.php';
+
+class CategoryController
+{
+    private CategoryRepository $repo;
+    
+    public function __construct()
+    {
+        $this->repo = new CategoryRepository();
+    }
+
+    public function list() 
+    {
+        $categories = $this->repo->findAll();
+        include __DIR__ . '/../view/category_list.php';
+    }
+
+    public function create()
+    {
+        include __DIR__ . '/../view/category_create.php';
+    }
+
+    public function store()
+    {
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+
+        $category = new Category(
+            name: $name,
+            urlImage: $urlImage,
+            description: $description
+        );
+        $this->repo->create($category);
+        header("Location: " . BASE_PATH . "/category/list");
+        exit;
+    }
+
+    public function edit(int $id)
+    {
+        $category = $this->repo->findById($id);
+        include __DIR__ . '/../view/category_edit.php';
+    }
+
+    public function update()
+    {
+        $id = $_POST['id'];
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+
+        $category = new Category(
+            id: $id,
+            name: $name,
+            urlImage: $urlImage,
+            description: $description
+        );
+        $this->repo->update($category);
+        header("Location: " . BASE_PATH . "/category/list");
+        exit;
+    }
+
+    public function delete()
+    {
+        $id = $_POST['id'];
+
+        $this->repo->delete($id);
+        header("Location: " . BASE_PATH . "/category/list");
+        exit;
+    }
+}
+
+
+# controller/ProductController.php
+<?php
+
+require_once __DIR__ . '/../repository/ProductRepository.php';
+require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../repository/VariantRepository.php';
+require_once __DIR__ . '/../repository/VariantItemRepository.php';
+require_once __DIR__ . '/../entity/Product.php';
+require_once __DIR__ . '/../entity/Variant.php';
+require_once __DIR__ . '/../entity/VariantItem.php';
+require_once __DIR__ . '/../config/base_path.php';
+
+class ProductController
+{
+    private ProductRepository $productRepository;
+    private VariantRepository $variantRepository;
+    private VariantItemRepository $variantItemRepository;
+    private CategoryRepository $categoryRepository;
+
+    public function __construct()
+    {
+        $this->productRepository = new ProductRepository();
+        $this->variantRepository = new VariantRepository();
+        $this->variantItemRepository = new VariantItemRepository();
+        $this->categoryRepository = new CategoryRepository();
+    }
+
+    public function list() 
+    {
+        $products = $this->productRepository->findAll();
+        include __DIR__ . '/../view/product_list.php';
+    }
+
+    public function listFromCategory(int $id)
+    {
+        $products = $this->productRepository->findByCategory($id);
+        include __DIR__ . '/../view/product_list.php';
+    }
+
+    public function detail(int $id)
+    {
+        $product = $this->productRepository->findById($id);
+        $variants = $this->variantRepository->findByProduct($product->id);
+        foreach ($variants as $variant) {
+            $variantItems = $this->variantItemRepository->findByVariant($variant->id);
+            $variant->variantItems = $variantItems;
+        }
+        $product->variants = $variants;
+        include __DIR__ . '/../view/product_detail.php';
+    }
+
+    public function create()
+    {
+        $categories = $this->categoryRepository->findAll();
+        include __DIR__ . '/../view/product_create.php';
+    }
+
+    public function store()
+    {
+        $categoryId = $_POST['categoryId'] ?? null;
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+        $recommendation = $_POST['recommendation'];
+        $price = $_POST['price']; 
+        $available = $_POST['available'];     
+        $product = new Product(
+            null,
+            $categoryId, 
+            $name,
+            $urlImage,
+            $description,
+            $recommendation,
+            $price,
+            $available
+        );
+        $product = $this->productRepository->create($product);
+        
+        $variants = $_POST['variants'] ?? [];
+
+        foreach ($variants as $v) {
+            $variant = new Variant(
+                null,
+                $product->id,
+                $v['name'],
+                $v['max'],
+                $v['min']
+            );
+            $variant = $this->variantRepository->create($variant);
+
+            $variantItems = $v['variantItems'];
+            foreach ($variantItems as $vi) {
+                $variantItem = new VariantItem(
+                    null,
+                    $variant->id,
+                    $vi['name']
+                );
+                $variantItem = $this->variantItemRepository->create($variantItem);
+            }
+        } 
+        header("Location: " . BASE_PATH . "/product/list");
+        exit;
+    }
+
+    public function edit(int $id)
+    {
+        $product = $this->productRepository->findById($id);
+        $variants = $this->variantRepository->findByProduct($product->id);
+        foreach ($variants as $variant) {
+            $variantItems = $this->variantItemRepository->findByVariant($variant->id);
+            $variant->variantItems = $variantItems;
+        }
+        $product->variants = $variants;    
+        $categories = $this->categoryRepository->findAll(); 
+        include __DIR__ . '/../view/product_edit.php';
+    }
+
+    public function update()
+    {
+        $id = $_POST['id'];
+        $categoryId = $_POST['categoryId'] ?? null;
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+        $recommendation = $_POST['recommendation'];
+        $price = $_POST['price'];
+        $available = $_POST['available'];
+        $product = new Product(
+            $id,
+            $categoryId, 
+            $name,
+            $urlImage,
+            $description,
+            $recommendation,
+            $price,
+            $available
+        );
+        $this->productRepository->update($product);
+
+        $variants = $_POST['variants'] ?? [];
+
+        foreach($variants as $v) {
+            $variant = new Variant(
+                $v['id'],
+                $v['productId'],
+                $v['name'],
+                $v['max'],
+                $v['min']
+            );
+            if (empty($variant->id)) {
+                $this->variantRepository->create($variant);
+            } else {
+                $this->variantRepository->update($variant);
+            }
+
+            $variantItems = $v['variantItems'];
+            foreach($variantItems as $vi) {
+                $variantItem = new VariantItem(
+                    $vi['id'],
+                    $vi['variantId'],
+                    $vi['name']
+                );
+                if (empty($variantItem->id)) {
+                    $this->variantItemRepository->create($variantItem);
+                } else {
+                    $this->variantItemRepository->update($variantItem);
+                }
+            }
+        }
+
+        $variantsDeleted = $_POST['variantsDeleted'] ?? [];
+        foreach ($variantsDeleted as $vd) {
+            $this->variantRepository->delete($vd);
+        }
+
+        $variantItemsDeleted = $_POST['variantItemsDeleted'] ?? [];
+        foreach ($variantItemsDeleted as $vid) {
+            $this->variantItemRepository->delete($vid);
+        }
+
+        header("Location: " . BASE_PATH . "/product/edit/{$product->id}");
+        exit;
+    }
+}
+
+
 # entity/Category.php
 <?php
 
 class Category
 {
+    public array $products = []; 
     public function __construct(
         public ?int $id = null,
         public string $name = '',
@@ -38,6 +311,7 @@ class Category
 
 class Product
 {
+    public array $variants = []; 
     public function __construct(
         public ?int $id = null,
         public ?int $categoryId = null,
@@ -54,6 +328,7 @@ class Product
 <?php
 class Variant
 {
+    public array $variantItems = []; 
     public function __construct(
         public ?int $id = null,
         public ?int $productId = null,
@@ -76,10 +351,108 @@ class VariantItem
 }
 
 # index.php
+<?php
 
+require_once __DIR__ . '/controller/ProductController.php';
+require_once __DIR__ . '/controller/CategoryController.php';
+require_once __DIR__ . '/config/base_path.php';
+
+$uri = strtolower(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+$uri = preg_replace('#^/either-cook#', '', $uri);
+$uri = trim($uri, '/');
+$segments = explode('/', $uri);
+    
+$s0 = $segments[0] ?? '';
+$s1 = $segments[1] ?? '';
+$s2 = $segments[2] ?? '';
+// /product/detail/<id>
+// /product/edit/<id>
+// /product/category/<id>
+// /product/list
+// /product/create
+// /product/store
+// /product/update
+// /category/edit/<id>
+// /category/list
+// /category/create
+// /category/store
+// /category/update
+
+if ($s0 === 'product' && $s1 === 'detail' && is_numeric($s2)) {
+    $controller = new ProductController();
+    $controller->detail((int)$s2);
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'edit' && is_numeric($s2)) {
+    $controller = new ProductController();
+    $controller->edit((int)$s2);
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'category' && is_numeric($s2)) {
+    $controller = new ProductController();
+    $controller->listFromCategory((int)$s2);
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'list') {
+    $controller = new ProductController();
+    $controller->list();
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'create') {
+    $controller = new ProductController();
+    $controller->create();
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'store') {
+    $controller = new ProductController();
+    $controller->store();
+    exit;
+}
+
+if ($s0 === 'product' && $s1 === 'update') {
+    $controller = new ProductController();
+    $controller->update();
+    exit;
+}
+
+if ($s0 === 'category' && $s1 === 'edit' && is_numeric($s2)) {
+    $controller = new CategoryController();
+    $controller->edit((int)$s2);
+    exit;
+}
+
+if ($s0 === 'category' && $s1 === 'list') {
+    $controller = new CategoryController();
+    $controller->list();
+    exit;
+}
+
+if ($s0 === 'category' && $s1 === 'create') {
+    $controller = new CategoryController();
+    $controller->create();
+    exit;
+}
+
+if ($s0 === 'category' && $s1 === 'store') {
+    $controller = new CategoryController();
+    $controller->store();
+    exit;
+}
+
+if ($s0 === 'category' && $s1 === 'update') {
+    $controller = new CategoryController();
+    $controller->update();
+    exit;
+}
 
 # repository/CategoryRepository.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Category.php';
 
@@ -105,7 +478,7 @@ class CategoryRepository
                 urlImage: $row['url_image'],
                 description: $row['description']
             );
-            $categories[]=$category;
+            $categories[] = $category;
         }
         return $categories;
     }
@@ -119,7 +492,7 @@ class CategoryRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $category = new Category (
+        $category = new Category(
             id: (int)$row['id'],
             name: $row['name'],
             urlImage: $row['url_image'],
@@ -128,17 +501,18 @@ class CategoryRepository
         return $category;
     }
 
-    public function create(Category $category): bool
+    public function create(Category $category): Category
     {
         $sql = "INSERT INTO categories (name, url_image, description) VALUES (:name, :urlImage, :description)";
-
         $stmt = $this->conn->prepare($sql);
-
-        return $stmt->execute([
+        $stmt->execute([
             'name' => $category->name,
             'urlImage' => $category->urlImage,
             'description' => $category->description,
         ]);
+        
+        $category->id = (int)$this->conn->lastInsertId();
+        return $category;
     }
 
     public function update(Category $category): bool
@@ -157,19 +531,19 @@ class CategoryRepository
         ]);
     }
 
-    public function delete(Category $category): bool
+    public function delete(int $categoryId): bool
     {
-        if ($category->id === null) return false;
-
         $sql = "DELETE FROM categories WHERE id = :id";
-        $stmt = $this->conn->prepare ($sql);
+        $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute(['id' => $category->id]);
+        return $stmt->execute(['id' => $categoryId]);
     }
 }
 
+
 # repository/ProductRepository.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Product.php';
 
@@ -199,7 +573,7 @@ class ProductRepository
                 (float)$row['price'],
                 (bool)$row['available']
             );
-            $products[]=$product;
+            $products[] = $product;
         }
         return $products;
     }
@@ -213,9 +587,9 @@ class ProductRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $product = new Product (
+        $product = new Product(
             (int)$row['id'],
-            $row['category_id'], 
+            $row['category_id'],
             $row['name'],
             $row['url_image'],
             $row['description'],
@@ -233,9 +607,9 @@ class ProductRepository
         $stmt->execute(['categoryId' => $categoryId]);
         $products = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $product = new Product (
+            $product = new Product(
                 (int)$row['id'],
-                $row['category_id'], 
+                $row['category_id'],
                 $row['name'],
                 $row['url_image'],
                 $row['description'],
@@ -243,18 +617,18 @@ class ProductRepository
                 (float)$row['price'],
                 (bool)$row['available']
             );
-            $products[]=$product;
+            $products[] = $product;
         }
         return $products;
     }
 
-    public function create(Product $product): bool
+    public function create(Product $product): Product
     {
         $sql = "INSERT INTO products (category_id, name, url_image, description, recommendation, price, available) VALUES (:categoryId, :name, :urlImage, :description, :recommendation, :price, :available)";
 
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute([
+        $stmt->execute([
             'categoryId' => $product->categoryId,
             'name' => $product->name,
             'urlImage' => $product->urlImage,
@@ -263,17 +637,19 @@ class ProductRepository
             'price' => $product->price,
             'available' => $product->available,
         ]);
+        $product->id = (int)$this->conn->lastInsertId();
+        return $product;
     }
 
     public function update(Product $product): bool
     {
         if ($product->id === null) return false;
 
-        $sql = "UPDATE products SET category_id = :categoryId, name = :name, url_image = :urlImage, description = :description, recommendation = :recommendation, price = :price, available = :available WHERE id = :Id";
-        
+        $sql = "UPDATE products SET category_id = :categoryId, name = :name, url_image = :urlImage, description = :description, recommendation = :recommendation, price = :price, available = :available WHERE id = :id";
+
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute([
+        $stmt->execute([
             'id' => $product->id,
             'categoryId' => $product->categoryId,
             'name' => $product->name,
@@ -283,21 +659,24 @@ class ProductRepository
             'price' => $product->price,
             'available' => $product->available,
         ]);
+
+        return $stmt->rowCount() > 0;
     }
 
-    public function delete(Product $product): bool
-    {
-        if ($product->id === null) return false;
 
+    public function delete(int $productId): bool
+    {
         $sql = "DELETE FROM products WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
-        
-        return $stmt->execute(['id' => $product->id]);
+
+        return $stmt->execute(['id' => $productId]);
     }
 }
 
+
 # repository/VariantItemRepository.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/VariantItem.php';
 
@@ -312,70 +691,74 @@ class VariantItemRepository
 
     public function findAll(): array
     {
-        $sql = "SELECT * FROM varian_items";
+        $sql = "SELECT * FROM variant_items";
         $stmt = $this->conn->query($sql);
 
-        $varianItems = [];
+        $variantItems = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $varianItem = new VariantItem(
+            $variantItem = new VariantItem(
                 id: (int)$row['id'],
                 variantId: $row['variant_id'],
                 name: $row['name']
             );
-            $varianItems[]=$varianItem;
+            $variantItems[] = $variantItem;
         }
-        return $varianItems;
+        return $variantItems;
     }
 
     public function findById(int $id): ?VariantItem
     {
-        $sql = "SELECT * FROM varian_items WHERE id = :id";
+        $sql = "SELECT * FROM variant_items WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['id' => $id]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $varianItem = new VariantItem (
+        $variantItem = new VariantItem(
             id: (int)$row['id'],
             variantId: $row['variant_id'],
             name: $row['name']
         );
-        return $varianItem;
+        return $variantItem;
     }
 
-   public function findByVariant(int $variantId): array
+    public function findByVariant(int $variantId): array
     {
         $sql = "SELECT * FROM variant_items WHERE variant_id = :variantId";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['variantId' => $variantId]);
         $variantItems = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $variantItem = new VariantItem (
+            $variantItem = new VariantItem(
                 id: (int)$row['id'],
-                variantId: $row['variant_id'], 
+                variantId: $row['variant_id'],
                 name: $row['name'],
             );
-            $variantItems[]=$variantItem;
+            $variantItems[] = $variantItem;
         }
         return $variantItems;
     }
-    public function create(VariantItem $variantItem): bool
+    public function create(VariantItem $variantItem): VariantItem
     {
-        $sql = "INSERT INTO varian_items (name) VALUES (:name)";
+        $sql = "INSERT INTO variant_items (variant_id, name) VALUES (:variantId, :name)";
 
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute([
+        $stmt->execute([
+            'variantId' => $variantItem->variantId,
             'name' => $variantItem->name,
         ]);
+
+        $variantItem->id = (int)$this->conn->lastInsertId();
+        return $variantItem;
     }
 
     public function update(VariantItem $variantItem): bool
     {
         if ($variantItem->id === null) return false;
 
-        $sql = "UPDATE varian_items SET name = :name WHERE id = :id";
+        $sql = "UPDATE variant_items SET name = :name WHERE id = :id";
 
         $stmt = $this->conn->prepare($sql);
 
@@ -385,26 +768,26 @@ class VariantItemRepository
         ]);
     }
 
-    public function delete(VariantItem $variantItem): bool 
+    public function delete(int $variantItemId): bool
     {
-        if ($variantItem->id === null) return false;
-
-        $sql = "DELETE FROM varian_items WHERE id = :id";
+        $sql = "DELETE FROM variant_items WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
-        
-        return $stmt->execute(['id' => $variantItem->id]);
+
+        return $stmt->execute(['id' => $variantItemId]);
     }
 }
 
+
 # repository/VariantRepository.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Variant.php';
 
 class VariantRepository
 {
     private PDO $conn;
-    public function __construct() 
+    public function __construct()
     {
         $db = new Database();
         $this->conn = $db->connect();
@@ -424,12 +807,12 @@ class VariantRepository
                 max: $row['max'],
                 min: $row['min']
             );
-            $variants[]=$variant;
+            $variants[] = $variant;
         }
         return $variants;
     }
 
-    public function findById(int $id): ?Variant 
+    public function findById(int $id): ?Variant
     {
         $sql = "SELECT * FROM variants WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
@@ -438,7 +821,7 @@ class VariantRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $variant = new Variant (
+        $variant = new Variant(
             id: (int)$row['id'],
             productId: $row['product_id'],
             name: $row['name'],
@@ -448,26 +831,26 @@ class VariantRepository
         return $variant;
     }
 
-   public function findByProduct(int $productId): array
+    public function findByProduct(int $productId): array
     {
         $sql = "SELECT * FROM variants WHERE product_id = :productId";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['productId' => $productId]);
         $variants = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $variant = new Variant (
+            $variant = new Variant(
                 id: (int)$row['id'],
-                productId: $row['product_id'], 
+                productId: $row['product_id'],
                 name: $row['name'],
                 max: $row['max'],
                 min: $row['min']
             );
-            $variants[]=$variant;
+            $variants[] = $variant;
         }
         return $variants;
     }
 
-    public function create(Variant $variant): bool 
+    public function create(Variant $variant): Variant
     {
         $sql = "
         INSERT INTO variants 
@@ -477,15 +860,17 @@ class VariantRepository
 
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute([
-            'productId' =>$variant->productId,
+        $stmt->execute([
+            'productId' => $variant->productId,
             'name' => $variant->name,
             'max' => $variant->max,
             'min' => $variant->min,
         ]);
+        $variant->id = (int)$this->conn->lastInsertId();
+        return $variant;
     }
 
-    public function update(Variant $variant): bool 
+    public function update(Variant $variant): bool
     {
         if ($variant->id === null) return false;
 
@@ -494,29 +879,27 @@ class VariantRepository
         $stmt = $this->conn->prepare($sql);
 
         return $stmt->execute([
-            'productId' =>$variant->productId,
+            'id' => $variant->id,
+            'productId' => $variant->productId,
             'name' => $variant->name,
             'max' => $variant->max,
             'min' => $variant->min,
         ]);
     }
 
-    public function delete(Variant $variant): bool 
+    public function delete(int $variantId): bool
     {
-        if ($variant->id === null) return false;
-
         $sql = "DELETE FROM variants WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute(['id' => $variant->id]);
+        return $stmt->execute(['id' => $variantId]);
     }
 }
-
-# route.php
 
 
 # setup/create_db.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 
 $db = new Database();
@@ -542,28 +925,34 @@ $pdo->exec("
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        category_id INT NULL,
         name VARCHAR(255) NOT NULL,
         url_image TEXT NOT NULL,
         description TEXT NOT NULL,
         recommendation TINYINT(1) DEFAULT 0,
         price DECIMAL(10,2) NOT NULL DEFAULT 0.0,
-        available TINYINT(1) DEFAULT 1     
+        available TINYINT(1) DEFAULT 1,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
     );
 ");
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS variants (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NULL,
         name VARCHAR(255) NOT NULL,
         max INT NULL,
-        min INT NULL
+        min INT NULL,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE 
     );
 ");
 
 $pdo->exec("
-    CREATE TABLE IF NOT EXISTS varian_items (
+    CREATE TABLE IF NOT EXISTS variant_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL
+        variant_id INT NULL,
+        name VARCHAR(255) NOT NULL,
+        FOREIGN KEY (variant_id) REFERENCES variants(id) ON DELETE CASCADE 
     )
 ");
 
@@ -572,6 +961,7 @@ echo "database created";
 
 # setup/drop_db.php
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 
 $db = new Database();
@@ -591,4 +981,240 @@ try {
 } catch (PDOException $e) {
     echo "Gagal menghapus database: " . $e->getMessage();
 }
+
+# setup/seed_db.php
+<?php
+require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../repository/ProductRepository.php';
+require_once __DIR__ . '/../repository/VariantRepository.php';
+require_once __DIR__ . '/../repository/VariantItemRepository.php';
+require_once __DIR__ . '/../entity/Category.php';
+require_once __DIR__ . '/../entity/Product.php';
+require_once __DIR__ . '/../entity/Variant.php';
+require_once __DIR__ . '/../entity/VariantItem.php';
+
+echo "=== SEED DATABASE START ===\n";
+
+$catRepo = new CategoryRepository();
+$prodRepo = new ProductRepository();
+$variantRepo = new VariantRepository();
+$variantItemRepo = new VariantItemRepository();
+
+// --- Seed Categories ---
+$categoriesData = [
+    ['name' => 'Food', 'urlImage' => 'https://via.placeholder.com/150', 'description' => 'All kinds of food'],
+    ['name' => 'Drinks', 'urlImage' => 'https://via.placeholder.com/150', 'description' => 'Beverages and drinks'],
+    ['name' => 'Snacks', 'urlImage' => 'https://via.placeholder.com/150', 'description' => 'Quick bites'],
+];
+
+$categories = [];
+foreach ($categoriesData as $data) {
+    $cat = new Category(name: $data['name'], urlImage: $data['urlImage'], description: $data['description']);
+    $cat = $catRepo->create($cat);
+    $categories[] = $cat;
+    echo "Created Category: {$cat->id} - {$cat->name}\n";
+}
+
+// --- Seed Products ---
+$products = [];
+foreach ($categories as $cat) {
+    for ($i = 1; $i <= 3; $i++) { // 3 products per category
+        $prod = new Product(
+            categoryId: $cat->id,
+            name: "{$cat->name} Product $i",
+            urlImage: 'https://via.placeholder.com/150',
+            description: "Description of {$cat->name} Product $i",
+            recommendation: rand(0,1) === 1,
+            price: rand(10,100),
+            available: true
+        );
+        $prod = $prodRepo->create($prod);
+        $products[] = $prod;
+        echo "Created Product: {$prod->id} - {$prod->name}\n";
+    }
+}
+
+// --- Seed Variants & Variant Items ---
+foreach ($products as $prod) {
+    for ($i = 1; $i <= 2; $i++) { // 2 variants per product
+        $variant = new Variant(
+            productId: $prod->id,
+            name: "Variant $i",
+            max: rand(1,5),
+            min: rand(0,2)
+        );
+        $variant = $variantRepo->create($variant);
+        echo "  Created Variant: {$variant->id} - {$variant->name}\n";
+
+        for ($j = 1; $j <= 2; $j++) { // 2 variant items per variant
+            $vi = new VariantItem(
+                variantId: $variant->id,
+                name: "Item $j"
+            );
+            $vi = $variantItemRepo->create($vi);
+            echo "    Created VariantItem: {$vi->id} - {$vi->name}\n";
+        }
+    }
+}
+
+echo "=== SEED DATABASE COMPLETE ===\n";
+
+
+# test/tes.php
+<?php
+
+require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../repository/ProductRepository.php';
+require_once __DIR__ . '/../repository/VariantRepository.php';
+require_once __DIR__ . '/../repository/VariantItemRepository.php';
+require_once __DIR__ . '/../entity/Category.php';
+require_once __DIR__ . '/../entity/Product.php';
+require_once __DIR__ . '/../entity/Variant.php';
+require_once __DIR__ . '/../entity/VariantItem.php';
+
+echo "===== SUPER COMPLETE REPOSITORY TEST =====\n\n";
+
+$failedTests = [];
+
+function assertTrue($cond, $msg) {
+    global $failedTests;
+    if ($cond) {
+        echo "[PASS] $msg\n";
+    } else {
+        echo "[FAIL] $msg\n";
+        $failedTests[] = $msg;
+    }
+}
+
+// --- INIT ---
+$catRepo = new CategoryRepository();
+$prodRepo = new ProductRepository();
+$variantRepo = new VariantRepository();
+$variantItemRepo = new VariantItemRepository();
+
+// --- CREATE MULTIPLE CATEGORIES ---
+$categories = [];
+for ($i=1; $i<=5; $i++) {
+    $cat = new Category(name: "Category $i", urlImage: "http://example.com/cat$i.jpg", description: "Desc $i");
+    $cat = $catRepo->create($cat); // pastikan ID terisi
+    $categories[] = $cat;
+    assertTrue($cat->id !== null, "Category $i created");
+}
+
+// --- CREATE MULTIPLE PRODUCTS PER CATEGORY ---
+$products = [];
+foreach ($categories as $cat) {
+    for ($i=1; $i<=10; $i++) {
+        $prod = new Product(
+            categoryId: $cat->id, 
+            name: "Product {$cat->id}-$i", 
+            urlImage: "http://example.com/prod{$cat->id}_$i.jpg", 
+            description: "Desc $i", 
+            recommendation: true, 
+            price: rand(10,100), 
+            available: true
+        );
+        $prod = $prodRepo->create($prod);
+        $products[] = $prod;
+        assertTrue($prod->id !== null, "Product {$prod->id} created in Category {$cat->id}");
+    }
+}
+
+// --- CREATE VARIANTS AND VARIANT ITEMS PER PRODUCT ---
+$variants = [];
+$variantItems = [];
+foreach ($products as $prod) {
+    for ($i=1; $i<=3; $i++) {
+        $variant = new Variant(productId: $prod->id, name: "Variant $i", max: 5, min: 1);
+        $variant = $variantRepo->create($variant);
+        $variants[] = $variant;
+        assertTrue($variant->id !== null, "Variant {$variant->id} created for Product {$prod->id}");
+        for ($j=1; $j<=3; $j++) {
+            $vi = new VariantItem(variantId: $variant->id, name: "Item $j");
+            $vi = $variantItemRepo->create($vi);
+            $variantItems[] = $vi;
+            assertTrue($vi->id !== null, "VariantItem {$vi->id} created for Variant {$variant->id}");
+        }
+    }
+}
+
+// --- VERIFY RELATIONS ---
+foreach ($products as $prod) {
+    if ($prod->categoryId !== null) {
+        $prodsInCat = $prodRepo->findByCategory($prod->categoryId);
+        assertTrue(in_array($prod->id, array_map(fn($p)=>$p->id,$prodsInCat)), "Product {$prod->id} correctly linked to Category {$prod->categoryId}");
+    }
+}
+
+foreach ($variants as $variant) {
+    $vars = $variantRepo->findByProduct($variant->productId);
+    assertTrue(in_array($variant->id, array_map(fn($v)=>$v->id,$vars)), "Variant {$variant->id} correctly linked to Product {$variant->productId}");
+}
+
+foreach ($variantItems as $vi) {
+    $vis = $variantItemRepo->findByVariant($vi->variantId);
+    assertTrue(in_array($vi->id, array_map(fn($v)=>$v->id,$vis)), "VariantItem {$vi->id} correctly linked to Variant {$vi->variantId}");
+}
+
+// --- UPDATE RANDOM RECORDS ---
+foreach (array_slice($categories,0,2) as $cat) {
+    $cat->name .= " Updated";
+    assertTrue($catRepo->update($cat), "Category {$cat->id} updated");
+}
+foreach (array_slice($products,0,5) as $prod) {
+    $prod->price += 5;
+    assertTrue($prodRepo->update($prod), "Product {$prod->id} updated");
+}
+foreach (array_slice($variants,0,5) as $v) {
+    $v->name .= " Updated";
+    assertTrue($variantRepo->update($v), "Variant {$v->id} updated");
+}
+foreach (array_slice($variantItems,0,5) as $vi) {
+    $vi->name .= " Updated";
+    assertTrue($variantItemRepo->update($vi), "VariantItem {$vi->id} updated");
+}
+
+// --- DELETE AND CASCADE CHECK ---
+$delCat = $categories[0];
+assertTrue($catRepo->delete($delCat->id), "Deleted Category {$delCat->id}");
+
+// Products of deleted category should have category_id = null
+foreach ($products as $prod) {
+    if ($prod->categoryId === $delCat->id) {
+        $prodsAfterDelCat = $prodRepo->findByCategory($prod->categoryId);
+        assertTrue(count($prodsAfterDelCat) == 0, "Products of deleted category {$delCat->id} are gone");
+    }
+}
+
+// Delete all products and check cascade to variants & items
+foreach ($products as $prod) {
+    assertTrue($prodRepo->delete($prod->id), "Deleted Product {$prod->id}");
+    $vars = $variantRepo->findByProduct($prod->id);
+    assertTrue(count($vars) == 0, "Variants of deleted Product {$prod->id} are gone");
+}
+
+// Delete all remaining categories
+foreach ($categories as $cat) {
+    if ($cat->id !== $delCat->id) $catRepo->delete($cat->id);
+}
+
+// --- EDGE CASES ---
+$fakeDeleteCat = $catRepo->delete(999999);
+assertTrue($fakeDeleteCat, "Deleting non-existent category returns true");
+
+$fakeUpdateProduct = $prodRepo->update(new Product(id: 999999, name: "Fake"));
+assertTrue(!$fakeUpdateProduct, "Updating non-existent product returns false");
+
+// --- TEST SUMMARY ---
+echo "\n===== SUPER COMPLETE REPOSITORY TEST FINISHED =====\n";
+
+if (empty($failedTests)) {
+    echo "All tests passed!\n";
+} else {
+    echo "Failed tests:\n";
+    foreach ($failedTests as $fail) {
+        echo " - $fail\n";
+    }
+}
+
 

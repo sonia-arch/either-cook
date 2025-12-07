@@ -1,5 +1,13 @@
 <?php
+
 require_once __DIR__ . '/../repository/ProductRepository.php';
+require_once __DIR__ . '/../repository/CategoryRepository.php';
+require_once __DIR__ . '/../repository/VariantRepository.php';
+require_once __DIR__ . '/../repository/VariantItemRepository.php';
+require_once __DIR__ . '/../entity/Product.php';
+require_once __DIR__ . '/../entity/Variant.php';
+require_once __DIR__ . '/../entity/VariantItem.php';
+require_once __DIR__ . '/../config/base_path.php';
 
 class ProductController
 {
@@ -16,7 +24,7 @@ class ProductController
         $this->categoryRepository = new CategoryRepository();
     }
 
-    public function list() 
+    public function list()
     {
         $products = $this->productRepository->findAll();
         include __DIR__ . '/../view/product_list.php';
@@ -53,11 +61,11 @@ class ProductController
         $urlImage = $_POST['urlImage'];
         $description = $_POST['description'];
         $recommendation = $_POST['recommendation'];
-        $price = $_POST['price']; 
-        $available = $_POST['available'];     
+        $price = $_POST['price'];
+        $available = $_POST['available'];
         $product = new Product(
             null,
-            $categoryId, 
+            $categoryId,
             $name,
             $urlImage,
             $description,
@@ -66,8 +74,8 @@ class ProductController
             $available
         );
         $product = $this->productRepository->create($product);
-        
-        $variants = $_POST['variants'];
+
+        $variants = $_POST['variants'] ?? [];
 
         foreach ($variants as $v) {
             $variant = new Variant(
@@ -88,22 +96,21 @@ class ProductController
                 );
                 $variantItem = $this->variantItemRepository->create($variantItem);
             }
-        } 
-        header("Location: /product/list");
+        }
+        header("Location: " . BASE_PATH . "/product/list");
         exit;
     }
 
     public function edit(int $id)
     {
-
         $product = $this->productRepository->findById($id);
         $variants = $this->variantRepository->findByProduct($product->id);
         foreach ($variants as $variant) {
             $variantItems = $this->variantItemRepository->findByVariant($variant->id);
             $variant->variantItems = $variantItems;
         }
-        $product->variants = $variants;    
-        $categories = $this->categoryRepository->findAll(); 
+        $product->variants = $variants;
+        $categories = $this->categoryRepository->findAll();
         include __DIR__ . '/../view/product_edit.php';
     }
 
@@ -119,7 +126,7 @@ class ProductController
         $available = $_POST['available'];
         $product = new Product(
             $id,
-            $categoryId, 
+            $categoryId,
             $name,
             $urlImage,
             $description,
@@ -128,30 +135,31 @@ class ProductController
             $available
         );
         $this->productRepository->update($product);
-        $variants = $_POST['variants'];
-        foreach($variants as $v) {
+
+        $variants = $_POST['variants'] ?? [];
+
+        foreach ($variants as $v) {
             $variant = new Variant(
-                $v['id'],
+                empty($v['id']) ? null : (int)$v['id'],
                 $v['productId'],
                 $v['name'],
                 $v['max'],
                 $v['min']
             );
-            // jika data masih baru 
-            if ($variant->id === '') {
-                $this->variantRepository->create($variant);
+            if (empty($variant->id)) {
+                $variant = $this->variantRepository->create($variant);
             } else {
                 $this->variantRepository->update($variant);
             }
 
             $variantItems = $v['variantItems'];
-            foreach($variantItems as $vi) {
+            foreach ($variantItems as $vi) {
                 $variantItem = new VariantItem(
-                    $vi['id'],
-                    $vi['variantId'],
+                    empty($vi['id']) ? null : (int)$vi['id'],
+                    $variant->id,
                     $vi['name']
                 );
-                if ($variantItem->id === '') {
+                if (empty($variantItem->id)) {
                     $this->variantItemRepository->create($variantItem);
                 } else {
                     $this->variantItemRepository->update($variantItem);
@@ -159,43 +167,23 @@ class ProductController
             }
         }
 
-        $variantsDeleted = $_POST['variantsDeleted'];
+        $variantsDeleted = $_POST['variantsDeleted'] ?? [];
         foreach ($variantsDeleted as $vd) {
-            $this->variantRepository->delete($vd);
+            $vd = $vd === '' ? null : (int)$vd;
+            if ($vd !== null) {
+                $this->variantRepository->delete($vd);
+            }
         }
 
-        $variantItemsDeleted = $_POST['$variantItemsDeleted'];
+        $variantItemsDeleted = $_POST['variantItemsDeleted'] ?? [];
         foreach ($variantItemsDeleted as $vid) {
-            $this->variantItemRepository->delete($vid);
+            $vid = $vid === '' ? null : (int)$vid;
+            if ($vid !== null) {
+                $this->variantItemRepository->delete($vid);
+            }
         }
 
-        header("Location: /product/edit/{$product->id}");
+        header("Location: " . BASE_PATH . "/product/edit/{$product->id}");
         exit;
     }
-
-    // public function delete()
-    // {
-    //     $id = $_POST['id'] ?? '';
-    //     $name = $_POST['name'] ?? '';
-    //     $urlImage = $_POST['urlImage'] ?? '';
-    //     $description = $_POST['description'] ?? '';
-    //     $recommendation = $_POST['recommendation'] ?? '';
-    //     $price = $_POST['price'] ?? '';
-
-    //     $product = new Product(
-    //       $id,
-    //       null,
-    //       $name,
-    //       $urlImage,
-    //       $description,
-    //       $recommendation,
-    //       $price 
-    //     );
-    //     $this->productRepository->delete($product);
-    //     header("Location: /product/list");
-    //     exit;
-    // }
 }
-
-
-

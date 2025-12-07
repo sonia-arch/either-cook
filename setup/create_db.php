@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 
 $db = new Database();
@@ -42,7 +43,7 @@ $pdo->exec("
         name VARCHAR(255) NOT NULL,
         max INT NULL,
         min INT NULL,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON CASCADE 
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE 
     );
 ");
 
@@ -51,7 +52,7 @@ $pdo->exec("
         id INT AUTO_INCREMENT PRIMARY KEY,
         variant_id INT NULL,
         name VARCHAR(255) NOT NULL,
-        FOREIGN KEY (variant_id) REFERENCES variants(id) ON CASCADE 
+        FOREIGN KEY (variant_id) REFERENCES variants(id) ON DELETE CASCADE 
     )
 ");
 

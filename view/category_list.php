@@ -7,8 +7,8 @@
 </head>
 <body>
     <h1>Category List</h1>
-    <a href="/category/create">Create New Category</a> | 
-    <a href="/product/list">View All Products</a>
+    <a href="<?= BASE_PATH ?>/category/create">Create New Category</a> | 
+    <a href="<?= BASE_PATH ?>/product/list">View All Products</a>
     <table border="1" cellpadding="5" cellspacing="0" style="margin-top:10px;">
         <thead>
             <tr>
@@ -23,7 +23,7 @@
             <tr>
                 <td><?= htmlspecialchars($category->id) ?></td>
                 <td>
-                    <a href="/product/category/<?= htmlspecialchars($category->id) ?>">
+                    <a href="<?= BASE_PATH ?>/product/category/<?= htmlspecialchars($category->id) ?>">
                         <?= htmlspecialchars($category->name) ?>
                     </a>
                 </td>

@@ -8,9 +8,9 @@
 <body>
 
 <h1>Create Product</h1>
-<a href="/product/list">Back to Product List</a>
+<a href="<?= BASE_PATH ?>/product/list">Back to Product List</a>
 
-<form action="/product/store" method="post">
+<form action="<?= BASE_PATH ?>/product/store" method="post">
 
 ```
 <!-- Category -->

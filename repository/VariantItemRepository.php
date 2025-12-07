@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/VariantItem.php';
 
@@ -23,7 +24,7 @@ class VariantItemRepository
                 variantId: $row['variant_id'],
                 name: $row['name']
             );
-            $variantItems[]=$variantItem;
+            $variantItems[] = $variantItem;
         }
         return $variantItems;
     }
@@ -37,7 +38,7 @@ class VariantItemRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $variantItem = new VariantItem (
+        $variantItem = new VariantItem(
             id: (int)$row['id'],
             variantId: $row['variant_id'],
             name: $row['name']
@@ -45,31 +46,33 @@ class VariantItemRepository
         return $variantItem;
     }
 
-   public function findByVariant(int $variantId): array
+    public function findByVariant(int $variantId): array
     {
         $sql = "SELECT * FROM variant_items WHERE variant_id = :variantId";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute(['variantId' => $variantId]);
         $variantItems = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $variantItem = new VariantItem (
+            $variantItem = new VariantItem(
                 id: (int)$row['id'],
-                variantId: $row['variant_id'], 
+                variantId: $row['variant_id'],
                 name: $row['name'],
             );
-            $variantItems[]=$variantItem;
+            $variantItems[] = $variantItem;
         }
         return $variantItems;
     }
     public function create(VariantItem $variantItem): VariantItem
     {
-        $sql = "INSERT INTO variant_items (name) VALUES (:name)";
+        $sql = "INSERT INTO variant_items (variant_id, name) VALUES (:variantId, :name)";
 
         $stmt = $this->conn->prepare($sql);
 
         $stmt->execute([
+            'variantId' => $variantItem->variantId,
             'name' => $variantItem->name,
         ]);
+
         $variantItem->id = (int)$this->conn->lastInsertId();
         return $variantItem;
     }
@@ -88,13 +91,11 @@ class VariantItemRepository
         ]);
     }
 
-    public function delete(int $variantItemId): bool 
+    public function delete(int $variantItemId): bool
     {
-        if ($variantItemId === null) return false;
-
         $sql = "DELETE FROM variant_items WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
-        
+
         return $stmt->execute(['id' => $variantItemId]);
     }
 }

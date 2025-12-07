@@ -5,7 +5,7 @@
  */
 
 $projectRoot = dirname(__DIR__); // root proyek (satu level di atas utils/)
-$ignoreFolders = ['assets', 'utils']; // abaikan folder assets & utils
+$ignoreFolders = ['assets', 'utils', 'view']; // abaikan folder assets & utils
 $outputFile = __DIR__ . '/all_code.txt'; // output berada di utils/
 
 function scanFolder($dir, $ignoreFolders = [], $relativePath = '') {

@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Product List</h1>
-    <a href="/product/create">Create New Product</a>
+    <a href="<?= BASE_PATH ?>/product/create">Create New Product</a>
     <table border="1" cellpadding="5" cellspacing="0" style="margin-top:10px;">
         <thead>
             <tr>
@@ -25,7 +25,7 @@
             <tr>
                 <td><?= htmlspecialchars($product->id) ?></td>
                 <td>
-                    <a href="/product/detail/<?= htmlspecialchars($product->id) ?>">
+                    <a href="<?= BASE_PATH ?>/product/detail/<?= htmlspecialchars($product->id) ?>">
                         <?= htmlspecialchars($product->name) ?>
                     </a>
                 </td>

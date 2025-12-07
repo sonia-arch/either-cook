@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../entity/Category.php';
 
@@ -24,7 +25,7 @@ class CategoryRepository
                 urlImage: $row['url_image'],
                 description: $row['description']
             );
-            $categories[]=$category;
+            $categories[] = $category;
         }
         return $categories;
     }
@@ -38,7 +39,7 @@ class CategoryRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) return null;
 
-        $category = new Category (
+        $category = new Category(
             id: (int)$row['id'],
             name: $row['name'],
             urlImage: $row['url_image'],
@@ -47,17 +48,18 @@ class CategoryRepository
         return $category;
     }
 
-    public function create(Category $category): bool
+    public function create(Category $category): Category
     {
         $sql = "INSERT INTO categories (name, url_image, description) VALUES (:name, :urlImage, :description)";
-
         $stmt = $this->conn->prepare($sql);
-
-        return $stmt->execute([
+        $stmt->execute([
             'name' => $category->name,
             'urlImage' => $category->urlImage,
             'description' => $category->description,
         ]);
+        
+        $category->id = (int)$this->conn->lastInsertId();
+        return $category;
     }
 
     public function update(Category $category): bool
@@ -78,10 +80,8 @@ class CategoryRepository
 
     public function delete(int $categoryId): bool
     {
-        if ($categoryId === null) return false;
-
         $sql = "DELETE FROM categories WHERE id = :id";
-        $stmt = $this->conn->prepare ($sql);
+        $stmt = $this->conn->prepare($sql);
 
         return $stmt->execute(['id' => $categoryId]);
     }
