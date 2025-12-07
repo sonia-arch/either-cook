@@ -16,11 +16,11 @@ class CategoryController
         include __DIR__ . '/../view/category_list.php';
     }
 
-    public function detail(int $id)
-    {
-        $category = $this->repo->findById($id);
-        include __DIR__ . '/../view/category_detail.php';
-    }
+    // public function detail(int $id)
+    // {
+    //     $category = $this->repo->findById($id);
+    //     include __DIR__ . '/../view/category_detail.php';
+    // }
 
     public function create()
     {
@@ -29,9 +29,9 @@ class CategoryController
 
     public function store()
     {
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
 
         $category = new Category(
             name: $name,
@@ -52,10 +52,10 @@ class CategoryController
 
     public function update()
     {
-        $id = $_POST['id'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
+        $id = $_POST['id'];
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
 
         $category = new Category(
             id: $id,
@@ -70,18 +70,9 @@ class CategoryController
 
     public function delete()
     {
-        $id = $_POST['id'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
+        $id = $_POST['id'];
 
-        $category = new Category(
-            id: $id,
-            name: $name,
-            urlImage: $urlImage,
-            description: $description
-        );
-        $this->repo->delete($category);
+        $this->repo->delete($id);
         header("Location: /category/list");
         exit;
     }

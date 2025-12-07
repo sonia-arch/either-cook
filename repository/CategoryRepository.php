@@ -76,13 +76,13 @@ class CategoryRepository
         ]);
     }
 
-    public function delete(Category $category): bool
+    public function delete(int $categoryId): bool
     {
-        if ($category->id === null) return false;
+        if ($categoryId === null) return false;
 
         $sql = "DELETE FROM categories WHERE id = :id";
         $stmt = $this->conn->prepare ($sql);
 
-        return $stmt->execute(['id' => $category->id]);
+        return $stmt->execute(['id' => $categoryId]);
     }
 }

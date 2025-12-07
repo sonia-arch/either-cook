@@ -6,17 +6,25 @@ class ProductController
     private ProductRepository $productRepository;
     private VariantRepository $variantRepository;
     private VariantItemRepository $variantItemRepository;
+    private CategoryRepository $categoryRepository;
 
     public function __construct()
     {
         $this->productRepository = new ProductRepository();
         $this->variantRepository = new VariantRepository();
         $this->variantItemRepository = new VariantItemRepository();
+        $this->categoryRepository = new CategoryRepository();
     }
 
     public function list() 
     {
         $products = $this->productRepository->findAll();
+        include __DIR__ . '/../view/product_list.php';
+    }
+
+    public function listFromCategory(int $id)
+    {
+        $products = $this->productRepository->findByCategory($id);
         include __DIR__ . '/../view/product_list.php';
     }
 
@@ -34,70 +42,55 @@ class ProductController
 
     public function create()
     {
+        $categories = $this->categoryRepository->findAll();
         include __DIR__ . '/../view/product_create.php';
     }
 
     public function store()
     {
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
-        $recommendation = $_POST['recommendation'] ?? '';
-        $price = $_POST['price'] ?? '';      
+        $categoryId = $_POST['categoryId'] ?? null;
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+        $recommendation = $_POST['recommendation'];
+        $price = $_POST['price']; 
+        $available = $_POST['available'];     
         $product = new Product(
             null,
-            null, 
+            $categoryId, 
             $name,
             $urlImage,
             $description,
             $recommendation,
-            $price
+            $price,
+            $available
         );
         $product = $this->productRepository->create($product);
         
         $variants = $_POST['variants'];
 
         foreach ($variants as $v) {
-            $name = $v['name'];
-            $max = $v['max'];
-            $min = $v['min'];
             $variant = new Variant(
                 null,
                 $product->id,
-                $name,
-                $max,
-                $min
+                $v['name'],
+                $v['max'],
+                $v['min']
             );
             $variant = $this->variantRepository->create($variant);
 
             $variantItems = $v['variantItems'];
             foreach ($variantItems as $vi) {
-                $name = $vi['name'];
                 $variantItem = new VariantItem(
                     null,
                     $variant->id,
-                    $name
+                    $vi['name']
                 );
                 $variantItem = $this->variantItemRepository->create($variantItem);
             }
         } 
         header("Location: /product/list");
         exit;
-    }
-
-    public function storeVariant(int $productId) 
-    {
-        $name = $_POST['name'] ?? '';
-        $max = $_POST['max'] ?? '';
-        $min = $_POST['min'] ?? '';
-        $variant = new Variant(
-            null,
-            $productId,
-            $name,
-            $max,
-            $min
-        );
-        $variant = $this->variantRepository->create($variant);
     }
 
     public function edit(int $id)
@@ -109,56 +102,99 @@ class ProductController
             $variantItems = $this->variantItemRepository->findByVariant($variant->id);
             $variant->variantItems = $variantItems;
         }
-        $product->variants = $variants;       
+        $product->variants = $variants;    
+        $categories = $this->categoryRepository->findAll(); 
         include __DIR__ . '/../view/product_edit.php';
     }
 
-
     public function update()
     {
-        $id = $_POST['id'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
-        $recommendation = $_POST['recommendation'] ?? '';
-        $price = $_POST['price'] ?? '';
-
+        $id = $_POST['id'];
+        $categoryId = $_POST['categoryId'] ?? null;
+        $name = $_POST['name'];
+        $urlImage = $_POST['urlImage'];
+        $description = $_POST['description'];
+        $recommendation = $_POST['recommendation'];
+        $price = $_POST['price'];
+        $available = $_POST['available'];
         $product = new Product(
             $id,
-            null, 
+            $categoryId, 
             $name,
             $urlImage,
             $description,
             $recommendation,
-            $price
+            $price,
+            $available
         );
         $this->productRepository->update($product);
-        header("Location: /product/list");
+        $variants = $_POST['variants'];
+        foreach($variants as $v) {
+            $variant = new Variant(
+                $v['id'],
+                $v['productId'],
+                $v['name'],
+                $v['max'],
+                $v['min']
+            );
+            // jika data masih baru 
+            if ($variant->id === '') {
+                $this->variantRepository->create($variant);
+            } else {
+                $this->variantRepository->update($variant);
+            }
+
+            $variantItems = $v['variantItems'];
+            foreach($variantItems as $vi) {
+                $variantItem = new VariantItem(
+                    $vi['id'],
+                    $vi['variantId'],
+                    $vi['name']
+                );
+                if ($variantItem->id === '') {
+                    $this->variantItemRepository->create($variantItem);
+                } else {
+                    $this->variantItemRepository->update($variantItem);
+                }
+            }
+        }
+
+        $variantsDeleted = $_POST['variantsDeleted'];
+        foreach ($variantsDeleted as $vd) {
+            $this->variantRepository->delete($vd);
+        }
+
+        $variantItemsDeleted = $_POST['$variantItemsDeleted'];
+        foreach ($variantItemsDeleted as $vid) {
+            $this->variantItemRepository->delete($vid);
+        }
+
+        header("Location: /product/edit/{$product->id}");
         exit;
     }
 
-    public function delete()
-    {
-        $id = $_POST['id'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $urlImage = $_POST['urlImage'] ?? '';
-        $description = $_POST['description'] ?? '';
-        $recommendation = $_POST['recommendation'] ?? '';
-        $price = $_POST['price'] ?? '';
+    // public function delete()
+    // {
+    //     $id = $_POST['id'] ?? '';
+    //     $name = $_POST['name'] ?? '';
+    //     $urlImage = $_POST['urlImage'] ?? '';
+    //     $description = $_POST['description'] ?? '';
+    //     $recommendation = $_POST['recommendation'] ?? '';
+    //     $price = $_POST['price'] ?? '';
 
-        $product = new Product(
-          $id,
-          null,
-          $name,
-          $urlImage,
-          $description,
-          $recommendation,
-          $price 
-        );
-        $this->productRepository->delete($product);
-        header("Location: /product/list");
-        exit;
-    }
+    //     $product = new Product(
+    //       $id,
+    //       null,
+    //       $name,
+    //       $urlImage,
+    //       $description,
+    //       $recommendation,
+    //       $price 
+    //     );
+    //     $this->productRepository->delete($product);
+    //     header("Location: /product/list");
+    //     exit;
+    // }
 }
 
 

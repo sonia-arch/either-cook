@@ -116,13 +116,13 @@ class ProductRepository
         ]);
     }
 
-    public function delete(Product $product): bool
+    public function delete(int $productId): bool
     {
-        if ($product->id === null) return false;
+        if ($productId === null) return false;
 
         $sql = "DELETE FROM products WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
         
-        return $stmt->execute(['id' => $product->id]);
+        return $stmt->execute(['id' => $productId]);
     }
 }

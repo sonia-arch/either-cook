@@ -104,13 +104,13 @@ class VariantRepository
         ]);
     }
 
-    public function delete(Variant $variant): bool 
+    public function delete(int $variantId): bool 
     {
-        if ($variant->id === null) return false;
+        if ($variantId === null) return false;
 
         $sql = "DELETE FROM variants WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
 
-        return $stmt->execute(['id' => $variant->id]);
+        return $stmt->execute(['id' => $variantId]);
     }
 }
